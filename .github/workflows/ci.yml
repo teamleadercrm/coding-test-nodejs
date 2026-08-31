@@ -1,0 +1,32 @@
+name: verify
+
+on: [push, pull_request]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v5
+        with: { node-version-file: '.nvmrc', cache: npm }
+
+      - run: npm ci
+
+      - name: Gate — lint, types, tests
+        run: npm run verify
+
+      # Ground one of the review: is this the floor we handed over? Runs here so
+      # it can be read from the run summary without a local checkout. It is
+      # deliberately not part of `npm run verify` — the gate is about your code,
+      # this is about the three protected paths being untouched.
+      - name: Integrity — the floor, the fixtures and this workflow
+        if: always()
+        run: npm run verify:integrity
+
+      # Runs even when the gate is red: a reviewer wants to see what the
+      # service returns most of all when something is failing.
+      - name: Discount report
+        if: always()
+        run: npm run report
